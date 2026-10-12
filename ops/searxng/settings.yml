@@ -1,0 +1,16 @@
+# SearXNG settings used by MAVE's compose files (web search provider). Template: not validated in CI.
+# The instance is only reachable inside the compose network (and on 127.0.0.1 in the local stack), never publicly,
+# so the bot limiter is off. Do not publish this instance on the internet without turning the limiter back on.
+# The secret key comes from the SEARXNG_SECRET environment variable (set in the compose files).
+use_default_settings: true
+general:
+  instance_name: "MAVE search"
+search:
+  safe_search: 1        # moderate
+  formats:
+    - html
+    - json              # MAVE reads /search?format=json; without it SearXNG answers 403
+server:
+  limiter: false
+  public_instance: false
+  image_proxy: false

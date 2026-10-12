@@ -1,0 +1,37 @@
+# Local stack: MAVE API + PostgreSQL 16.   docker compose up --build
+# The database password defaults to "mave" for local use; set POSTGRES_PASSWORD (in .env or the shell) to change it.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mave
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mave}
+      POSTGRES_DB: mave
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    ports: ["127.0.0.1:5432:5432"]   # local tools / tests only; never published beyond this machine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mave -d mave"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+  searxng:   # web search provider (metasearch); settings: ../ops/searxng/settings.yml (JSON format on, limiter off)
+    image: searxng/searxng:latest
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-mave-local-searxng-secret}
+    volumes: ["../ops/searxng/settings.yml:/etc/searxng/settings.yml"]
+    ports: ["127.0.0.1:8081:8080"]   # local runs outside compose use SEARXNG_URL=http://localhost:8081; never published beyond this machine
+    restart: unless-stopped
+  api:
+    build: .
+    env_file: .env
+    environment:
+      MAVE_DATABASE_URL: postgresql://mave:${POSTGRES_PASSWORD:-mave}@db:5432/mave
+      SEARXNG_URL: http://searxng:8080
+    ports: ["8000:8000"]
+    depends_on:
+      db: { condition: service_healthy }
+      searxng: { condition: service_started }
+    restart: unless-stopped
+volumes:
+  pgdata:

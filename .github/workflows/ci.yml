@@ -1,0 +1,43 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: mave, POSTGRES_PASSWORD: mave, POSTGRES_DB: postgres }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mave" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      MAVE_TEST_DATABASE_URL: postgresql://mave:mave@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -t . -v
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: node --test tests/web/core.test.js tests/web/smoke.test.js  # web app + admin dashboard (no npm install needed)
+  security:  # blocking: a known-vulnerable dependency fails the build (and so blocks the staging deploy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      # to accept one finding that has no fix yet, add `--ignore-vuln <ID>` here with a comment saying why
+      - run: pip install pip-audit && pip-audit -r backend/requirements.txt
+  android:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: android } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.9" }
+      # use the committed wrapper once it exists (reproducible Gradle version); `bash` works even if the exec bit was lost
+      - run: if [ -f gradlew ]; then bash ./gradlew :app:assembleDebug; else gradle :app:assembleDebug; fi

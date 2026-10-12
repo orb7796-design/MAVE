@@ -1,0 +1,31 @@
+name: Generate Gradle Wrapper
+# One-off, manual (Actions tab -> "Generate Gradle Wrapper" -> Run workflow).
+# gradle-wrapper.jar is a binary that must come from Gradle itself, so it is generated here (this runner has network)
+# and downloaded as an artifact: unzip it into android/, commit it, and the Android CI job starts using it.
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  wrapper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.9" }
+      # an empty directory: the wrapper task does not need the Android project (or the Android SDK) to be configured
+      - name: Generate and smoke-test the wrapper
+        run: |
+          mkdir -p "$RUNNER_TEMP/wrapper" && cd "$RUNNER_TEMP/wrapper"
+          gradle wrapper --gradle-version 8.9 --distribution-type bin
+          ./gradlew --version
+          sha256sum gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gradle-wrapper
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/wrapper/gradlew
+            ${{ runner.temp }}/wrapper/gradlew.bat
+            ${{ runner.temp }}/wrapper/gradle/wrapper/gradle-wrapper.jar
+            ${{ runner.temp }}/wrapper/gradle/wrapper/gradle-wrapper.properties
