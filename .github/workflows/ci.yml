@@ -41,3 +41,5 @@ jobs:
         with: { gradle-version: "8.9" }
       # use the committed wrapper once it exists (reproducible Gradle version); `bash` works even if the exec bit was lost
       - run: if [ -f gradlew ]; then bash ./gradlew :app:assembleDebug; else gradle :app:assembleDebug; fi
+- uses: actions/upload-artifact@v4
+  with: { name: mave-debug-apk, path: android/app/build/outputs/apk/debug/app-debug.apk }
