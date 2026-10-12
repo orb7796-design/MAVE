@@ -146,7 +146,7 @@ MIGRATIONS: dict[int, list[str]] = {
         "CREATE INDEX idx_docs_tsv ON documents USING GIN (tsv)",
         # Spelling vocabulary: one row per indexed term with the number of documents containing it.
         """CREATE MATERIALIZED VIEW docs_vocab AS
-             SELECT word AS term, ndoc AS cnt FROM ts_stat('SELECT tsv FROM documents')""",
+             SELECT word AS term, ndoc AS cnt FROM ts_stat('SELECT tsv FROM public.documents')""",
         "CREATE UNIQUE INDEX idx_docs_vocab_term ON docs_vocab(term)",  # also required by REFRESH ... CONCURRENTLY
         "CREATE INDEX idx_docs_vocab_prefix ON docs_vocab(term text_pattern_ops)",  # fast LIKE 'abc%'
     ],
